@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Interactive Quiz App</title>
+  <style>
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      margin: 0;
+      background: linear-gradient(to right, #74ebd5, #acb6e5);
+    }
+
+    .quiz-container {
+      background: linear-gradient(to bottom right, #ffecd2, #fcb69f);
+      padding: 2rem;
+      border-radius: 15px;
+      box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2);
+      width: 350px;
+      text-align: center;
+    }
+
+    .question {
+      font-size: 20px;
+      font-weight: bold;
+      margin-bottom: 1.5rem;
+      color: #333;
+    }
+
+    .btn {
+      display: block;
+      width: 100%;
+      margin: 10px 0;
+      padding: 12px;
+      border: none;
+      border-radius: 8px;
+      background: linear-gradient(to right, #e0c3fc, #8ec5fc);
+      cursor: pointer;
+      font-size: 16px;
+      transition: background 0.3s ease;
+      color: #333;
+    }
+
+    .btn:hover {
+      background: linear-gradient(to right, #d4fc79, #96e6a1);
+    }
+
+    .btn.correct {
+      background: #81c784 !important;
+      color: white;
+    }
+
+    .btn.wrong {
+      background: #e57373 !important;
+      color: white;
+    }
+
+    .controls {
+      margin-top: 1.5rem;
+      display: flex;
+      justify-content: space-between;
+      gap: 10px;
+    }
+
+    .hide {
+      display: none;
+    }
+
+    #score {
+      font-size: 18px;
+      font-weight: bold;
+      color: #333;
+      margin-top: 1rem;
+    }
+  </style>
+</head>
+<body>
+  <div class="quiz-container">
+    <div id="question-container">
+      <div id="question" class="question"></div>
+      <div id="answer-buttons"></div>
+    </div>
+    <div class="controls">
+      <button id="prev-btn" class="btn hide">⟵ Previous</button>
+      <button id="start-btn" class="btn">Start Quiz</button>
+      <button id="next-btn" class="btn hide">Next ⟶</button>
+    </div>
+    <div id="score" class="hide"></div>
+  </div>
+
+  <script>
+    const startButton = document.getElementById('start-btn');
+    const nextButton = document.getElementById('next-btn');
+    const prevButton = document.getElementById('prev-btn');
+    const questionContainer = document.getElementById('question-container');
+    const questionElement = document.getElementById('question');
+    const answerButtonsElement = document.getElementById('answer-buttons');
+    const scoreDisplay = document.getElementById('score');
+
+    let currentQuestionIndex = 0;
+    let score = 0;
+    let selectedAnswers = Array(10).fill(null);
+
+    const questions = [
+      { question: 'What does HTML stand for?', answers: [ { text: 'Hyper Trainer Marking Language', correct: false }, { text: 'Hyper Text Markup Language', correct: true }, { text: 'Hyper Text Markdown Language', correct: false }, { text: 'None of the above', correct: false } ] },
+      { question: 'Which language runs in a web browser?', answers: [ { text: 'Java', correct: false }, { text: 'C', correct: false }, { text: 'Python', correct: false }, { text: 'JavaScript', correct: true } ] },
+      { question: 'What does CSS stand for?', answers: [ { text: 'Computer Style Sheets', correct: false }, { text: 'Creative Style Sheets', correct: false }, { text: 'Cascading Style Sheets', correct: true }, { text: 'Colorful Style Sheets', correct: false } ] },
+      { question: 'Which HTML tag is used to define a hyperlink?', answers: [ { text: '<a>', correct: true }, { text: '<link>', correct: false }, { text: '<href>', correct: false }, { text: '<hyper>', correct: false } ] },
+      { question: 'Which property is used to change background color in CSS?', answers: [ { text: 'color', correct: false }, { text: 'bgcolor', correct: false }, { text: 'background-color', correct: true }, { text: 'bg-color', correct: false } ] },
+      { question: 'Which company developed JavaScript?', answers: [ { text: 'Netscape', correct: true }, { text: 'Microsoft', correct: false }, { text: 'Google', correct: false }, { text: 'Apple', correct: false } ] },
+      { question: 'Which tag is used to define a table in HTML?', answers: [ { text: '<table>', correct: true }, { text: '<tab>', correct: false }, { text: '<td>', correct: false }, { text: '<tr>', correct: false } ] },
+      { question: 'Which symbol is used for comments in JavaScript?', answers: [ { text: '//', correct: true }, { text: '<!-- -->', correct: false }, { text: '#', correct: false }, { text: '**', correct: false } ] },
+      { question: 'Which keyword is used to declare a variable in JavaScript?', answers: [ { text: 'var', correct: true }, { text: 'int', correct: false }, { text: 'String', correct: false }, { text: 'new', correct: false } ] },
+      { question: 'What does DOM stand for?', answers: [ { text: 'Document Object Model', correct: true }, { text: 'Data Object Model', correct: false }, { text: 'Desktop Object Management', correct: false }, { text: 'Document Oriented Model', correct: false } ] }
+    ];
+
+    startButton.addEventListener('click', startQuiz);
+    nextButton.addEventListener('click', handleNext);
+    prevButton.addEventListener('click', handlePrevious);
+
+    function startQuiz() {
+      startButton.classList.add('hide');
+      currentQuestionIndex = 0;
+      score = 0;
+      selectedAnswers.fill(null);
+      questionContainer.classList.remove('hide');
+      scoreDisplay.classList.add('hide');
+      prevButton.classList.add('hide');
+      setNextQuestion();
+    }
+
+    function setNextQuestion() {
+      resetState();
+      showQuestion(questions[currentQuestionIndex]);
+      if (currentQuestionIndex > 0) prevButton.classList.remove('hide');
+      else prevButton.classList.add('hide');
+    }
+
+    function showQuestion(question) {
+      questionElement.innerText = question.question;
+      question.answers.forEach((answer, index) => {
+        const button = document.createElement('button');
+        button.innerText = answer.text;
+        button.classList.add('btn');
+        if (answer.correct) button.dataset.correct = answer.correct;
+        button.addEventListener('click', (e) => selectAnswer(e, index));
+        if (selectedAnswers[currentQuestionIndex] === index) {
+          button.classList.add(answer.correct ? 'correct' : 'wrong');
+        }
+        answerButtonsElement.appendChild(button);
+      });
+      nextButton.classList.remove('hide');
+    }
+
+    function resetState() {
+      while (answerButtonsElement.firstChild) {
+        answerButtonsElement.removeChild(answerButtonsElement.firstChild);
+      }
+    }
+
+    function selectAnswer(e, index) {
+      const selectedButton = e.target;
+      const correct = selectedButton.dataset.correct === 'true';
+      selectedAnswers[currentQuestionIndex] = index;
+      if (correct) score++;
+      Array.from(answerButtonsElement.children).forEach(button => {
+        setStatusClass(button, button.dataset.correct === 'true');
+      });
+    }
+
+    function setStatusClass(element, correct) {
+      element.classList.remove('correct');
+      element.classList.remove('wrong');
+      if (correct) {
+        element.classList.add('correct');
+      } else {
+        element.classList.add('wrong');
+      }
+    }
+
+    function handleNext() {
+      if (currentQuestionIndex + 1 < questions.length) {
+        currentQuestionIndex++;
+        setNextQuestion();
+      } else {
+        questionContainer.classList.add('hide');
+        nextButton.classList.add('hide');
+        prevButton.classList.add('hide');
+        scoreDisplay.classList.remove('hide');
+        scoreDisplay.innerText = `You scored ${score} out of ${questions.length}`;
+        startButton.innerText = 'Restart Quiz';
+        startButton.classList.remove('hide');
+      }
+    }
+
+    function handlePrevious() {
+      if (currentQuestionIndex > 0) {
+        currentQuestionIndex--;
+        setNextQuestion();
+      }
+    }
+  </script>
+</body>
+</html>
